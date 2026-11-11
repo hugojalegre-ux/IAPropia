@@ -46,10 +46,13 @@ public sealed class SeguridadOptions
 public sealed class InternetBusquedaOptions
 {
     public bool Habilitada { get; set; } = true;
-    public int MaxFragmentos { get; set; } = 4;
+    public int MaxFragmentos { get; set; } = 6;
     public bool UsarRespaldoHtml { get; set; } = true;
-    public int MaxCaracteresConsulta { get; set; } = 120;
-    public int MaxCaracteresFragmento { get; set; } = 400;
+    /// <summary>Si true, combina JSON + HTML en la misma consulta (más recall, más lento).</summary>
+    public bool CombinarJsonYHtml { get; set; } = true;
+    public int MaxVariantesConsulta { get; set; } = 2;
+    public int MaxCaracteresConsulta { get; set; } = 160;
+    public int MaxCaracteresFragmento { get; set; } = 500;
 }
 
 public sealed class ChatsOptions

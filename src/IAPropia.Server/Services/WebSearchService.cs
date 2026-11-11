@@ -4,15 +4,23 @@ using IAPropia.Models;
 
 namespace IAPropia.Services;
 
-/// <summary>Búsqueda web (DuckDuckGo JSON + respaldo HTML lite) sin API de pago.</summary>
+/// <summary>Búsqueda web (DuckDuckGo JSON + HTML lite/standard) sin API de pago.</summary>
 public sealed class WebSearchService
 {
-    private static readonly Regex HtmlSnippetRegex = new(
+    private static readonly Regex HtmlLiteSnippetRegex = new(
         @"class=""result-snippet"">\s*([^<]+)\s*</",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private static readonly Regex HtmlTitleRegex = new(
+    private static readonly Regex HtmlLiteTitleRegex = new(
         @"class=""result-link""[^>]*>([^<]+)</a>",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex HtmlStdSnippetRegex = new(
+        @"class=""result__snippet""[^>]*>([^<]+)</",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex HtmlStdTitleRegex = new(
+        @"class=""result__a""[^>]*>([^<]+)</a>",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     private readonly HttpClient _http;
@@ -40,19 +48,26 @@ public sealed class WebSearchService
         if (string.IsNullOrWhiteSpace(consulta))
             return ("", 0, avisos);
 
-        var consultaWeb = RefinarConsulta(consulta);
-        var tokens = Tokenizar(consultaWeb);
+        var consultas = WebSearchQueryHelper.GenerarConsultas(
+            consulta,
+            _opts.MaxCaracteresConsulta,
+            _opts.MaxVariantesConsulta);
 
-        List<string> fragmentos;
+        if (consultas.Count == 0)
+            consultas = [RefinarConsulta(consulta)];
+
+        var fragmentos = new List<string>();
+        var origen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         try
         {
-            fragmentos = await BuscarJsonInstantAsync(consultaWeb, ct);
-            if (fragmentos.Count == 0 && _opts.UsarRespaldoHtml)
+            foreach (var q in consultas)
             {
-                var htmlHits = await BuscarHtmlLiteAsync(consultaWeb, ct);
-                fragmentos.AddRange(htmlHits);
-                if (htmlHits.Count > 0)
-                    avisos.Add("Internet: respaldo HTML lite (resultados de búsqueda).");
+                var (hits, notas) = await BuscarUnaConsultaAsync(q, ct);
+                foreach (var n in notas) origen.Add(n);
+                fragmentos.AddRange(hits);
+                if (fragmentos.Count >= _opts.MaxFragmentos * 2)
+                    break;
             }
         }
         catch (Exception ex)
@@ -61,6 +76,11 @@ public sealed class WebSearchService
             avisos.Add("Búsqueda web falló: " + ex.Message);
             return ("", 0, avisos);
         }
+
+        if (origen.Count > 0)
+            avisos.Add("Internet: " + string.Join("; ", origen.OrderBy(x => x)));
+
+        var tokens = Tokenizar(string.Join(' ', consultas));
 
         fragmentos = fragmentos
             .Select(f => TruncarFragmento(f))
@@ -79,7 +99,7 @@ public sealed class WebSearchService
             if (mejor <= 0)
             {
                 avisos.Add(
-                    "Búsqueda web sin resultados relevantes para tu pregunta. El modelo no debe inventar datos de internet.");
+                    "Búsqueda web sin resultados relevantes. Respondé sin inventar datos de internet.");
                 return ("", 0, avisos);
             }
 
@@ -101,14 +121,81 @@ public sealed class WebSearchService
         }
 
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Resultados web (DuckDuckGo — datos NO verificados; pueden estar desactualizados o ser irrelevantes):");
-        sb.AppendLine("Si no responden la pregunta del usuario, ignorálos y decilo en la respuesta.");
+        sb.AppendLine("Resultados web (DuckDuckGo — NO verificados; pueden estar desactualizados):");
+        sb.AppendLine("Usá solo frases que respondan la pregunta del usuario; el resto ignorá.");
         var i = 1;
         foreach (var f in fragmentos)
             sb.AppendLine($"{i++}. {f}");
 
         avisos.Add($"Internet: {fragmentos.Count} fragmento(s) relevantes.");
         return (sb.ToString().Trim(), fragmentos.Count, avisos);
+    }
+
+    private async Task<(List<string> Hits, List<string> Notas)> BuscarUnaConsultaAsync(string consulta, CancellationToken ct)
+    {
+        var notas = new List<string>();
+        var list = new List<string>();
+
+        var tJson = BuscarJsonInstantAsync(consulta, ct);
+        Task<List<string>>? tLite = null;
+        Task<List<string>>? tStd = null;
+
+        if (_opts.UsarRespaldoHtml && _opts.CombinarJsonYHtml)
+        {
+            tLite = BuscarHtmlLiteAsync(consulta, ct);
+            tStd = BuscarHtmlStandardAsync(consulta, ct);
+            await Task.WhenAll(tJson, tLite, tStd);
+        }
+        else
+        {
+            await tJson;
+        }
+
+        var json = await tJson;
+        if (json.Count > 0)
+        {
+            list.AddRange(json);
+            notas.Add("API instant JSON");
+        }
+
+        if (tLite != null)
+        {
+            var lite = await tLite;
+            if (lite.Count > 0)
+            {
+                list.AddRange(lite);
+                notas.Add("HTML lite");
+            }
+        }
+
+        if (tStd != null)
+        {
+            var std = await tStd;
+            if (std.Count > 0)
+            {
+                list.AddRange(std);
+                notas.Add("HTML estándar");
+            }
+        }
+
+        if (list.Count == 0 && _opts.UsarRespaldoHtml && !_opts.CombinarJsonYHtml)
+        {
+            var lite = await BuscarHtmlLiteAsync(consulta, ct);
+            if (lite.Count > 0)
+            {
+                list.AddRange(lite);
+                notas.Add("HTML lite");
+            }
+
+            var std = await BuscarHtmlStandardAsync(consulta, ct);
+            if (std.Count > 0)
+            {
+                list.AddRange(std);
+                notas.Add("HTML estándar");
+            }
+        }
+
+        return (list, notas);
     }
 
     private async Task<List<string>> BuscarJsonInstantAsync(string consulta, CancellationToken ct)
@@ -133,10 +220,7 @@ public sealed class WebSearchService
             if (t.Length > 0)
             {
                 var heading = root.TryGetProperty("Heading", out var h) ? h.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(heading))
-                    list.Add($"{heading.Trim()}: {t}");
-                else
-                    list.Add(t);
+                list.Add(!string.IsNullOrWhiteSpace(heading) ? $"{heading.Trim()}: {t}" : t);
             }
         }
 
@@ -157,7 +241,7 @@ public sealed class WebSearchService
 
         foreach (var item in topics.EnumerateArray())
         {
-            if (list.Count >= _opts.MaxFragmentos * 2) break;
+            if (list.Count >= _opts.MaxFragmentos * 3) break;
 
             if (item.TryGetProperty("Text", out var txt))
             {
@@ -170,7 +254,7 @@ public sealed class WebSearchService
             {
                 foreach (var sub in nested.EnumerateArray())
                 {
-                    if (list.Count >= _opts.MaxFragmentos * 2) break;
+                    if (list.Count >= _opts.MaxFragmentos * 3) break;
                     if (sub.TryGetProperty("Text", out var st))
                     {
                         var t = (st.GetString() ?? "").Trim();
@@ -186,9 +270,21 @@ public sealed class WebSearchService
         var q = Uri.EscapeDataString(consulta);
         var url = $"https://lite.duckduckgo.com/lite/?q={q}";
         var html = await _http.GetStringAsync(url, ct);
+        return ParsearParesHtml(html, HtmlLiteTitleRegex, HtmlLiteSnippetRegex);
+    }
 
-        var snippets = HtmlSnippetRegex.Matches(html).Select(m => DecodificarHtml(m.Groups[1].Value.Trim())).ToList();
-        var titles = HtmlTitleRegex.Matches(html).Select(m => DecodificarHtml(m.Groups[1].Value.Trim())).ToList();
+    private async Task<List<string>> BuscarHtmlStandardAsync(string consulta, CancellationToken ct)
+    {
+        var q = Uri.EscapeDataString(consulta);
+        var url = $"https://html.duckduckgo.com/html/?q={q}";
+        var html = await _http.GetStringAsync(url, ct);
+        return ParsearParesHtml(html, HtmlStdTitleRegex, HtmlStdSnippetRegex);
+    }
+
+    private List<string> ParsearParesHtml(string html, Regex titleRx, Regex snippetRx)
+    {
+        var snippets = snippetRx.Matches(html).Select(m => DecodificarHtml(m.Groups[1].Value.Trim())).ToList();
+        var titles = titleRx.Matches(html).Select(m => DecodificarHtml(m.Groups[1].Value.Trim())).ToList();
 
         var merged = new List<string>();
         for (var i = 0; i < Math.Min(snippets.Count, titles.Count) && merged.Count < _opts.MaxFragmentos * 2; i++)
@@ -213,16 +309,7 @@ public sealed class WebSearchService
         var max = Math.Clamp(_opts.MaxCaracteresConsulta, 40, 300);
         var t = consulta.Trim().Replace('\n', ' ').Replace('\r', ' ');
         while (t.Contains("  ", StringComparison.Ordinal)) t = t.Replace("  ", " ");
-
-        if (t.Length <= max) return t;
-
-        var corte = t.LastIndexOf('?', Math.Min(t.Length - 1, max));
-        if (corte >= 40) return t[..(corte + 1)];
-
-        corte = t.LastIndexOf('.', Math.Min(t.Length - 1, max));
-        if (corte >= 40) return t[..(corte + 1)];
-
-        return t[..max];
+        return t.Length <= max ? t : t[..max];
     }
 
     private string TruncarFragmento(string f)
@@ -236,7 +323,14 @@ public sealed class WebSearchService
     {
         if (tokens.Count == 0) return 1;
         var lower = texto.ToLowerInvariant();
-        return tokens.Sum(tok => lower.Contains(tok, StringComparison.Ordinal) ? 1 : 0);
+        var score = 0;
+        foreach (var tok in tokens)
+        {
+            if (lower.Contains(tok, StringComparison.Ordinal))
+                score += tok.Length >= 5 ? 2 : 1;
+        }
+
+        return score;
     }
 
     private static HashSet<string> Tokenizar(string consulta) =>
@@ -244,11 +338,12 @@ public sealed class WebSearchService
             .ToLowerInvariant()
             .Split([' ', '\t', ',', '.', ';', ':', '?', '!', '(', ')', '"', '¿', '¡'], StringSplitOptions.RemoveEmptyEntries)
             .Where(w => w.Length >= 3 && !EsStopword(w))
-            .Take(12)
+            .Take(14)
             .ToHashSet();
 
     private static bool EsStopword(string w) =>
-        w is "para" or "como" or "qué" or "que" or "con" or "por" or "los" or "las" or "una" or "uno" or "del" or "the" or "and";
+        w is "para" or "como" or "qué" or "que" or "con" or "por" or "los" or "las" or "una" or "uno" or "del"
+            or "the" or "and" or "esto" or "esta" or "cual" or "cuál" or "son" or "hay" or "más" or "mas";
 
     private static string DecodificarHtml(string s) =>
         System.Net.WebUtility.HtmlDecode(s);
