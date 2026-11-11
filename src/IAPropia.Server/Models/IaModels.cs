@@ -14,6 +14,33 @@ public sealed class IaPropiaOptions
     public bool ModoSoloLocal { get; set; } = true;
     public InternetBusquedaOptions InternetBusqueda { get; set; } = new();
     public ChatsOptions Chats { get; set; } = new();
+    public SeguridadOptions Seguridad { get; set; } = new();
+}
+
+public sealed class SeguridadOptions
+{
+  public bool EnlaceSoloLocalhost { get; set; } = true;
+
+  public bool RequiereApiKey { get; set; }
+
+  public string? ApiKey { get; set; }
+
+  public string HeaderApiKey { get; set; } = "X-IAPropia-Key";
+
+  public bool ValidarCloudflareAccess { get; set; }
+
+  /// <summary>Ej. tudominio.cloudflareaccess.com (sin https://).</summary>
+  public string? CloudflareTeamDomain { get; set; }
+
+  public string? AudienciaAccess { get; set; }
+
+  public bool ExponerRutasEnEstado { get; set; } = true;
+
+  public int LimiteMensajeCaracteres { get; set; } = 32_000;
+
+  public int MaxBodyKb { get; set; } = 512;
+
+  public int RateLimitChatPorMinuto { get; set; } = 20;
 }
 
 public sealed class InternetBusquedaOptions
@@ -207,4 +234,7 @@ public sealed class HealthDto
     public bool Ok { get; set; } = true;
     public string Version { get; set; } = "";
     public string Mensaje { get; set; } = "Servidor IA propia en ejecución.";
+    public bool RequiereApiKey { get; set; }
+    public string HeaderApiKey { get; set; } = "X-IAPropia-Key";
+    public bool ValidarCloudflareAccess { get; set; }
 }

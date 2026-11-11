@@ -2,6 +2,10 @@ data/
 dist/
 *.secrets.json
 appsettings.secrets.json
+src/IAPropia.Server/appsettings.Lan.json
+src/IAPropia.Server/appsettings.Tunel.json
+dist/IAPropia-win-x64/appsettings.Lan.json
+dist/IAPropia-win-x64/appsettings.Tunel.json
 CONFIG-CLOUD.txt
 config/tunel.local.json
 config/cloudflared.local/cert.pem

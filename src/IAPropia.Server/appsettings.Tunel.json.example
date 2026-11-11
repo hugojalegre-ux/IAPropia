@@ -1,0 +1,10 @@
+{
+  "IAPropia": {
+    "Seguridad": {
+      "RequiereApiKey": true,
+      "ValidarCloudflareAccess": true,
+      "ExponerRutasEnEstado": false,
+      "RateLimitChatPorMinuto": 10
+    }
+  }
+}

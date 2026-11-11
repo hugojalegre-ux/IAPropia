@@ -53,11 +53,14 @@
             <input id="modelo-custom" type="text" placeholder="ej. llama3.2" />
           </details>
           <div class="checks-group">
-            <label class="check">
+            <label class="field-label" for="api-key-local">Clave API (si el servidor la exige)</label>
+            <input id="api-key-local" type="password" autocomplete="off" placeholder="X-IAPropia-Key desde secrets" />
+            <button type="button" id="btn-guardar-api-key" class="btn link">Guardar clave en este navegador</button>
+            <label class="check" title="Archivos en conocimiento/ pueden contener texto manipulado; el modelo no debe obedecer instrucciones ocultas">
               <input type="checkbox" id="usar-rag" checked />
               <span>Usar mis notas locales</span>
             </label>
-            <label class="check">
+            <label class="check" title="DuckDuckGo aporta contexto no verificado; puede incluir contenido engañoso">
               <input type="checkbox" id="usar-internet" />
               <span>Buscar en internet antes de responder</span>
             </label>

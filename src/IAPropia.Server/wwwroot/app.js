@@ -7,12 +7,41 @@ const state = {
   internetHabilitada: true,
   healthTimer: null,
   chatsEnlace: [],
-  relacionadasSel: new Set()
+  relacionadasSel: new Set(),
+  requiereApiKey: false,
+  headerApiKey: "X-IAPropia-Key"
 };
 
 const $ = (id) => document.getElementById(id);
 
 const THEME_KEY = "ia-propia-theme";
+const API_KEY_STORAGE = "ia-propia-api-key";
+
+function getApiKeyGuardada() {
+  return localStorage.getItem(API_KEY_STORAGE) || "";
+}
+
+function authHeaders(extra = {}) {
+  const h = { ...extra };
+  const key = getApiKeyGuardada();
+  const name = state.headerApiKey || "X-IAPropia-Key";
+  if (key) h[name] = key;
+  return h;
+}
+
+function cargarApiKeyEnCampo() {
+  const el = $("api-key-local");
+  if (el && !el.value) el.value = getApiKeyGuardada();
+}
+
+function guardarApiKeyLocal() {
+  const el = $("api-key-local");
+  if (!el) return;
+  const v = el.value.trim();
+  if (v) localStorage.setItem(API_KEY_STORAGE, v);
+  else localStorage.removeItem(API_KEY_STORAGE);
+  alert(v ? "Clave guardada en este navegador (localStorage)." : "Clave eliminada de este navegador.");
+}
 
 function temaResuelto(mode) {
   if (mode === "dark") return "dark";
@@ -45,10 +74,16 @@ function initTema() {
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+    headers: { "Content-Type": "application/json", ...authHeaders(opts.headers || {}) },
     ...opts
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    throw new Error(
+      data.error ||
+        "Falta API key. Configurala en Ajustes del modelo (docs/SEGURIDAD.md en el repo IAPropia)."
+    );
+  }
   if (!res.ok && data.error) throw new Error(data.error);
   return data;
 }
@@ -158,11 +193,14 @@ function parseSseBlock(block) {
 async function consumirChatStream(body, onDelta) {
   const res = await fetch("/api/chat/stream", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body)
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      throw new Error(data.error || "Falta API key (Ajustes del modelo).");
+    }
     throw new Error(data.error || `HTTP ${res.status}`);
   }
   if (!res.body) throw new Error("El navegador no soporta streaming de respuesta.");
@@ -280,8 +318,16 @@ function pintarFooterEstado(est, ollamaHealth) {
   actualizarBotonEnviar();
 }
 
+async function sincronizarSeguridadDesdeHealth() {
+  const res = await fetch("/api/health");
+  const h = await res.json().catch(() => ({}));
+  if (h.requiereApiKey != null) state.requiereApiKey = !!h.requiereApiKey;
+  if (h.headerApiKey) state.headerApiKey = h.headerApiKey;
+}
+
 async function refrescarHealth() {
   try {
+    await sincronizarSeguridadDesdeHealth();
     const [est, ollamaHealth] = await Promise.all([api("/api/estado"), api("/api/health/ollama")]);
     rellenarModelosOllama(ollamaHealth, est);
     rellenarCarpetas(est.carpetas);
@@ -587,6 +633,7 @@ $("carpeta").addEventListener("change", () => {
   cargarAprendizajes();
 });
 $("forzar-envio").addEventListener("change", actualizarBotonEnviar);
+$("btn-guardar-api-key")?.addEventListener("click", guardarApiKeyLocal);
 
 document.querySelectorAll(".sidebar-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -605,6 +652,7 @@ $("input").addEventListener("keydown", (ev) => {
 });
 
 initTema();
+cargarApiKeyEnCampo();
 
 (async () => {
   try {

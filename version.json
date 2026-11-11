@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "nombre": "IA propia",
-  "notas": "Timeouts largos modo pesado; streaming SSE /api/chat/stream; clientes Http ollama y llm-web"
+  "notas": "Seguridad: API key, Cloudflare Access JWT, rate limit, localhost, docs SEGURIDAD"
 }

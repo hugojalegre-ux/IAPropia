@@ -20,6 +20,12 @@ if (-not $SinComprobarLocal) {
     try {
         $h = Invoke-RestMethod -Uri "$localUrl/api/health" -TimeoutSec 3
         Write-Host "IA propia OK local ($($h.version))"
+        if (-not $h.requiereApiKey) {
+            Write-Warning "Seguridad: RequiereApiKey=FALSE. Copiá appsettings.Tunel.json.example -> appsettings.Tunel.json y ApiKey en secrets (ver docs\SEGURIDAD.md)."
+        }
+        if (-not $h.validarCloudflareAccess) {
+            Write-Warning "Seguridad: ValidarCloudflareAccess=FALSE. Con túnel público debería estar en true + audiencia en secrets."
+        }
     } catch {
         Write-Error "IA propia no responde en $localUrl. Ejecutá primero Iniciar-IAPropia.bat"
     }

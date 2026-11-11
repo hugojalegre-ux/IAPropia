@@ -29,7 +29,7 @@ Hostname HTTPS: https://ia.________________.com
 
 ## Checklist Cloudflare Access (obligatorio)
 
-Sin Access **no** publiques el túnel: la app no tiene login propio.
+Sin Access **no** publiques el túnel: la app no tiene login propio. Además activá en el servidor API key y validación JWT (`docs/SEGURIDAD.md`, `appsettings.Tunel.json`).
 
 1. [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) → plan **Free** si aplica.
 2. **Access** → **Applications** → **Add an application** → **Self-hosted**.

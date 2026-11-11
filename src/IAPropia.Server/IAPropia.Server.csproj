@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <RuntimeHostConfigurationOption Include="RollForward" Value="LatestPatch" />
     <FrameworkReference Update="Microsoft.AspNetCore.App">
       <RuntimeFrameworkVersion>8.0.26</RuntimeFrameworkVersion>

@@ -29,6 +29,20 @@ HTTPS con dominio propio (Cloudflare Tunnel + Access). **Sin administrador:** `c
 
 URL pública: la definís vos (ej. `https://ia.tudominio.com`) tras dominio + Access en Cloudflare.
 
+## Seguridad (local, LAN y túnel)
+
+Guía completa: [`docs/SEGURIDAD.md`](docs/SEGURIDAD.md).
+
+| Escenario | Mínimo recomendado |
+|-----------|-------------------|
+| Solo PC | `EnlaceSoloLocalhost: true` (default) |
+| LAN | `appsettings.Lan.json` + API key en secrets |
+| Túnel | Cloudflare Access + `appsettings.Tunel.json` + validación JWT + API key |
+
+```powershell
+.\Verificar-Seguridad-IAPropia.ps1
+```
+
 ## Arranque recomendado (único camino)
 
 1. Doble clic en **`Iniciar-IAPropia.bat`** en la raíz del proyecto (o `.\Iniciar-IAPropia.ps1`).
