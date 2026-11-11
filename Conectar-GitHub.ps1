@@ -58,6 +58,7 @@ if ($status) {
     Write-Host "Hay cambios sin commitear; commiteá antes del push si querés subirlos."
 }
 
+gh auth setup-git | Out-Null
 Write-Host "Publicando rama main ..."
 git push -u origin main
 
