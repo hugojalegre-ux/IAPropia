@@ -1,0 +1,13 @@
+data/
+dist/
+*.secrets.json
+appsettings.secrets.json
+CONFIG-CLOUD.txt
+.env
+.env.*
+bin/
+obj/
+.vs/
+*.user
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IA propia</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <header class="brand">
+        <h1>IA propia</h1>
+        <p class="tagline">Ollama local · internet solo para buscar</p>
+      </header>
+      <button type="button" id="btn-nueva" class="btn primary block">Nueva conversación</button>
+      <section class="panel">
+        <h2>Carpeta</h2>
+        <select id="carpeta"></select>
+        <button type="button" id="btn-nueva-carpeta" class="btn subtle block">Nueva carpeta…</button>
+      </section>
+      <section class="panel">
+        <h2>Persona</h2>
+        <select id="persona"></select>
+      </section>
+      <section class="panel">
+        <h2>Modelo (Ollama)</h2>
+        <select id="modelo-select"></select>
+        <details class="modelo-avanzado">
+          <summary>Otro modelo (texto)</summary>
+          <input id="modelo-custom" type="text" placeholder="ej. llama3.2" />
+        </details>
+        <label class="check">
+          <input type="checkbox" id="usar-rag" checked />
+          Usar conocimiento local
+        </label>
+        <label class="check">
+          <input type="checkbox" id="usar-internet" />
+          Buscar en internet (DuckDuckGo)
+        </label>
+        <label class="check">
+          <input type="checkbox" id="forzar-envio" />
+          Enviar sin preflight (avanzado)
+        </label>
+      </section>
+      <section class="panel panel-grow">
+        <h2>Historial</h2>
+        <ul id="lista-conversaciones" class="conv-list"></ul>
+      </section>
+      <section class="panel panel-grow panel-aprendizajes">
+        <h2>Aprendizajes <span id="aprendizajes-count" class="badge"></span></h2>
+        <ul id="lista-aprendizajes" class="apr-list"></ul>
+      </section>
+      <footer class="estado" id="estado-servicio"></footer>
+    </aside>
+    <main class="chat">
+      <header class="chat-header">
+        <label class="field-label" for="titulo-chat">Título del chat</label>
+        <input id="titulo-chat" type="text" placeholder="Ej. Análisis runner QA — 28/10" />
+        <div class="enlaces-block">
+          <div class="enlaces-head">
+            <span class="field-label">Chats relacionados</span>
+            <label class="check check-inline">
+              <input type="checkbox" id="enlace-todas-carpetas" />
+              Todas las carpetas
+            </label>
+          </div>
+          <p class="hint">Marcá chats para reutilizar su contexto y aprendizajes en este hilo.</p>
+          <div id="lista-enlaces" class="enlace-list" aria-label="Chats para enlazar"></div>
+          <details class="ids-avanzado">
+            <summary>IDs manual (avanzado)</summary>
+            <input id="relacionadas" type="text" placeholder="ids adicionales separados por coma" />
+          </details>
+        </div>
+        <div class="chat-actions">
+          <button type="button" id="btn-guardar-meta" class="btn subtle">Guardar título / enlaces</button>
+          <button type="button" id="btn-aprendizaje" class="btn subtle">Guardar aprendizaje…</button>
+        </div>
+      </header>
+      <div id="mensajes" class="mensajes" role="log" aria-live="polite"></div>
+      <form id="form-chat" class="composer">
+        <textarea id="input" rows="2" placeholder="Escribí tu mensaje…" required></textarea>
+        <button type="submit" class="btn primary" id="btn-enviar">Enviar</button>
+      </form>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
