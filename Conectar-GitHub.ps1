@@ -1,4 +1,5 @@
-﻿# Conecta IA propia al repo hugojalegre-ux/IAPropia (primera vez o push pendiente).
+﻿# SOLO IA propia — publica este proyecto en hugojalegre-ux/IAPropia.
+# No usar para RunnerIA, SOT ni otros repos (corré esto solo dentro de esta carpeta).
 # Requiere: GitHub CLI (gh) — https://cli.github.com
 
 $ErrorActionPreference = 'Stop'

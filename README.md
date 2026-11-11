@@ -4,6 +4,17 @@ Proyecto **autónomo**: asistente personal con UI web, historial local y conocim
 
 **GitHub:** [github.com/hugojalegre-ux/IAPropia](https://github.com/hugojalegre-ux/IAPropia) (cuenta [hugojalegre-ux](https://github.com/hugojalegre-ux)).
 
+## Git — solo IA propia
+
+Este repositorio **contiene únicamente** la carpeta/proyecto **IAPropia**. No incluye RunnerIA, AutomatizacionSOT, SOT Accusys ni otros repos.
+
+| Dónde trabajás | Git que usás | Remoto |
+|----------------|--------------|--------|
+| `…/IAPropia/` | `IAPropia/.git` | `hugojalegre-ux/IAPropia` |
+| `…/RunnerIA/` (resto) | `RunnerIA/.git` | `HugoAlegre/RunnerIA` (IAPropia está en `.gitignore`) |
+
+Commits y `git push` de IA propia: siempre desde `C:\Repositorio\RunnerIA\IAPropia`. Para otros proyectos, volvé a la cuenta que corresponda (`gh auth switch -u HugoAlegre` si empujás RunnerIA).
+
 ## Arranque recomendado (único camino)
 
 1. Doble clic en **`Iniciar-IAPropia.bat`** en la raíz del proyecto (o `.\Iniciar-IAPropia.ps1`).
