@@ -1,5 +1,5 @@
 {
-  "version": "1.1.5",
+  "version": "1.2.0",
   "nombre": "IA propia",
-  "notas": "cloudflared portable sin admin; config tunnel en config/cloudflared.local (gitignored)"
+  "notas": "Timeouts largos modo pesado; streaming SSE /api/chat/stream; clientes Http ollama y llm-web"
 }

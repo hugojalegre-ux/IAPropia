@@ -31,6 +31,9 @@ public sealed class OllamaOptions
 {
     public string BaseUrl { get; set; } = "http://127.0.0.1:11434";
     public string Modelo { get; set; } = "llama3.2";
+    public int? NumCtx { get; set; }
+    public int? NumPredict { get; set; }
+    public string? KeepAlive { get; set; } = "10m";
 }
 
 public sealed class OpenAiCompatibleOptions
@@ -51,7 +54,10 @@ public sealed class RagOptions
 public sealed class LimitesOptions
 {
     public int MaxMensajesHistorial { get; set; } = 40;
-    public int TimeoutSegundos { get; set; } = 120;
+    public int TimeoutSegundos { get; set; } = 300;
+    public int TimeoutSegundosPesado { get; set; } = 1200;
+    public int TimeoutMaximo { get; set; } = 1800;
+    public int TimeoutBusquedaWebSegundos { get; set; } = 45;
 }
 
 public sealed class PersonaDef
@@ -80,6 +86,8 @@ public sealed class ChatRequest
     public string Mensaje { get; set; } = "";
     public bool UsarConocimientoLocal { get; set; } = true;
     public bool UsarBusquedaInternet { get; set; }
+    public bool ModoPesado { get; set; }
+    public bool UsarStreaming { get; set; } = true;
 }
 
 public sealed class ChatResponse

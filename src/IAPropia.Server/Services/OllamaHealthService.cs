@@ -10,7 +10,7 @@ public sealed class OllamaHealthService
 
     public OllamaHealthService(IHttpClientFactory factory, IaPropiaOptions opts)
     {
-        _http = factory.CreateClient("llm");
+        _http = factory.CreateClient("llm-web");
         _opts = opts;
     }
 

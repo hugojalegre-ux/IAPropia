@@ -85,6 +85,22 @@ Ruta típica: `%LOCALAPPDATA%\OllamaPortable\ollama.exe`. No hace falta ejecutar
 
 La UI **bloquea Enviar** si Ollama no está OK (salvo «Enviar sin preflight»).
 
+## Modelos pesados (timeout, streaming, contexto)
+
+Para modelos grandes, RAG + aprendizajes o respuestas largas:
+
+| Concepto | Valor por defecto (`Limites` en `appsettings.json`) |
+|----------|-----------------------------------------------------|
+| Chat normal | `TimeoutSegundos` **300** (5 min) |
+| **Modo pesado** (checkbox en UI) | `TimeoutSegundosPesado` **1200** (20 min) |
+| Tope HttpClient + Kestrel | `TimeoutMaximo` **1800** (30 min) |
+| Búsqueda web | `TimeoutBusquedaWebSegundos` **45** (cliente aparte) |
+
+- La UI usa **`POST /api/chat/stream`** (SSE): ves los tokens en vivo mientras Ollama genera. Si el stream falla, hace **fallback** a `POST /api/chat`.
+- Con **Respuestas largas / modelo pesado** activo se envían a Ollama `options.num_ctx` / `num_predict` según `IAPropia.Ollama` (por defecto 8192 / 4096) y `keep_alive` (ej. `10m`).
+- Ajustes en `src/IAPropia.Server/appsettings.json` o en el portable `dist/IAPropia-win-x64/appsettings.json` tras publicar.
+- Si sigue lento o con OOM: `ollama ps` y RAM del modelo; probá un modelo más chico o bajá `NumCtx`.
+
 ## Internet (solo búsqueda, sin API de chat de pago)
 
 - **`ModoSoloLocal: true`** (por defecto): el LLM es **siempre Ollama**.
@@ -116,7 +132,7 @@ En la UI: **carpeta**, **título**, **chats relacionados** (lista con casillas; 
 
 ## Configuración
 
-- `src/IAPropia.Server/appsettings.json` — puerto, Ollama, `ModoSoloLocal`, internet, carpetas, timeouts (`Limites.TimeoutSegundos`, recomendado **120**; modelos lentos **180–300**).
+- `src/IAPropia.Server/appsettings.json` — puerto, Ollama (`NumCtx`, `NumPredict`, `KeepAlive`), `ModoSoloLocal`, internet, carpetas, `Limites` (timeouts arriba).
 
 ## API (resumen)
 
@@ -130,7 +146,8 @@ En la UI: **carpeta**, **título**, **chats relacionados** (lista con casillas; 
 | PATCH | `/api/conversaciones/{id}` | Título, carpeta, chats relacionados |
 | GET/POST | `/api/aprendizajes` | Listar / guardar aprendizaje |
 | GET/DELETE | `/api/aprendizajes/{id}` | Ver / eliminar aprendizaje |
-| POST | `/api/chat` | Mensaje al LLM (Ollama + contexto opcional) |
+| POST | `/api/chat` | Mensaje al LLM (respuesta JSON completa) |
+| POST | `/api/chat/stream` | Mismo chat en SSE (`event: token` / `done` / `error`) |
 
 ## Modo desarrollo (secundario)
 

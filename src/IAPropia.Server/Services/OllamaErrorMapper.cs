@@ -4,10 +4,22 @@ namespace IAPropia.Services;
 
 public static class OllamaErrorMapper
 {
-    public static string DesdeExcepcion(Exception ex, string modelo, int? statusCode, string? cuerpo)
+    public static string DesdeExcepcion(
+        Exception ex,
+        string modelo,
+        int? statusCode,
+        string? cuerpo,
+        int? timeoutSegundos = null,
+        bool modoPesado = false)
     {
         if (ex is OperationCanceledException)
-            return "Ollama tardó demasiado en responder. Probá un modelo más liviano o aumentá Limites.TimeoutSegundos en appsettings.json.";
+        {
+            var t = timeoutSegundos ?? 0;
+            var modo = modoPesado ? " (modo pesado activo)" : "";
+            return t > 0
+                ? $"Ollama tardó más de {t} segundos{modo}. Aumentá TimeoutSegundosPesado en appsettings.json o probá un modelo más liviano."
+                : "Ollama tardó demasiado en responder. Activá «Respuestas largas» en la UI o aumentá Limites.TimeoutSegundos en appsettings.json.";
+        }
 
         if (ex is HttpRequestException)
             return "No se pudo conectar con Ollama. ¿Está corriendo? En otra terminal: ollama serve";

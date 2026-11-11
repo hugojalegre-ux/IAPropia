@@ -29,10 +29,26 @@ builder.Services.AddSingleton<OllamaHealthService>();
 builder.Services.AddSingleton<VersionInfo>();
 builder.Services.AddSingleton<IaFileLog>();
 
+var timeoutMax = Math.Clamp(iaOpts.Limites.TimeoutMaximo, 60, 3600);
+var timeoutWeb = Math.Clamp(iaOpts.Limites.TimeoutBusquedaWebSegundos, 10, 120);
+
+builder.Services.AddHttpClient("ollama", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(timeoutMax);
+});
+
+builder.Services.AddHttpClient("llm-web", c =>
+{
+    c.Timeout = TimeSpan.FromSeconds(timeoutWeb);
+});
+
+var timeoutNormal = Math.Clamp(iaOpts.Limites.TimeoutSegundos, 30, timeoutMax);
 builder.Services.AddHttpClient("llm", c =>
 {
-    c.Timeout = TimeSpan.FromSeconds(Math.Clamp(iaOpts.Limites.TimeoutSegundos, 30, 600));
+    c.Timeout = TimeSpan.FromSeconds(timeoutNormal);
 });
+
+builder.Services.AddRequestTimeouts();
 
 builder.Services.AddCors(o =>
     o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
@@ -43,6 +59,7 @@ var fileLog = app.Services.GetRequiredService<IaFileLog>();
 fileLog.LogStartup($"IA propia arrancó · proveedor={iaOpts.ProveedorPorDefecto}");
 
 app.UseCors();
+app.UseRequestTimeouts();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -197,7 +214,12 @@ app.MapPost("/api/chat", async (ChatRequest req, LlmOrchestrator llm, Cancellati
 {
     var res = await llm.ChatAsync(req, ct);
     return res.Ok ? Results.Ok(res) : Results.Json(res, statusCode: 400);
-});
+}).WithRequestTimeout(TimeSpan.FromSeconds(timeoutMax));
+
+app.MapPost("/api/chat/stream", async (ChatRequest req, LlmOrchestrator llm, HttpContext ctx, CancellationToken ct) =>
+{
+    await llm.ChatStreamAsync(req, ctx.Response, ct);
+}).WithRequestTimeout(TimeSpan.FromSeconds(timeoutMax));
 
 app.MapFallbackToFile("index.html");
 

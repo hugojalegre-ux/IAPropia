@@ -127,9 +127,85 @@ function actualizarBotonEnviar() {
   const forzar = $("forzar-envio").checked;
   const bloquear = !state.ollamaOk && !forzar;
   btn.disabled = state.enviando || bloquear;
+  if (state.enviando) {
+    btn.textContent = "Generando…";
+  } else {
+    btn.textContent = "Enviar";
+  }
   btn.title = bloquear
     ? "Ollama no está listo. Revisá el pie o activá envío sin preflight."
-    : "";
+    : state.enviando
+      ? "Ollama puede tardar varios minutos en modelos grandes."
+      : "";
+}
+
+function parseSseBlock(block) {
+  const lines = block.split("\n");
+  let event = "message";
+  let dataLine = "";
+  for (const line of lines) {
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:")) dataLine += line.slice(5).trim();
+  }
+  if (!dataLine) return null;
+  try {
+    return { event, data: JSON.parse(dataLine) };
+  } catch {
+    return null;
+  }
+}
+
+async function consumirChatStream(body, onDelta) {
+  const res = await fetch("/api/chat/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  if (!res.body) throw new Error("El navegador no soporta streaming de respuesta.");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let donePayload = null;
+  let streamError = null;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const parts = buf.split("\n\n");
+    buf = parts.pop() || "";
+    for (const block of parts) {
+      const ev = parseSseBlock(block);
+      if (!ev) continue;
+      if (ev.event === "token" && ev.data?.delta) onDelta(ev.data.delta);
+      if (ev.event === "done") donePayload = ev.data;
+      if (ev.event === "error") streamError = ev.data?.error || "Error en stream";
+    }
+  }
+  if (streamError) throw new Error(streamError);
+  if (!donePayload?.ok) throw new Error(donePayload?.error || "Stream sin cierre");
+  return donePayload;
+}
+
+function cuerpoChat(texto, tituloManual) {
+  return {
+    conversacionId: state.conversacionId,
+    personaId: $("persona").value,
+    proveedor: "ollama",
+    modelo: modeloSeleccionado(),
+    titulo: tituloManual || undefined,
+    carpetaId: $("carpeta").value || state.carpetaId,
+    relacionadasIds: relacionadasIds(),
+    mensaje: texto,
+    usarConocimientoLocal: $("usar-rag").checked,
+    usarBusquedaInternet: $("usar-internet").checked && state.internetHabilitada,
+    modoPesado: $("modo-pesado").checked
+  };
 }
 
 function rellenarModelosOllama(health, estado) {
@@ -447,24 +523,42 @@ async function enviar(e) {
   $("input").value = "";
 
   const tituloManual = $("titulo-chat").value.trim();
+  const body = cuerpoChat(texto, tituloManual);
+
+  const asistenteRow = document.createElement("div");
+  asistenteRow.className = "msg-row assistant";
+  const asistenteLabel = document.createElement("span");
+  asistenteLabel.className = "msg-label";
+  asistenteLabel.textContent = "Asistente";
+  asistenteRow.appendChild(asistenteLabel);
+  const asistenteBubble = document.createElement("div");
+  asistenteBubble.className = "bubble assistant";
+  asistenteBubble.textContent = "";
+  asistenteRow.appendChild(asistenteBubble);
+  inner.appendChild(asistenteRow);
 
   try {
-    const body = {
-      conversacionId: state.conversacionId,
-      personaId: $("persona").value,
-      proveedor: "ollama",
-      modelo: modeloSeleccionado(),
-      titulo: tituloManual || undefined,
-      carpetaId: $("carpeta").value || state.carpetaId,
-      relacionadasIds: relacionadasIds(),
-      mensaje: texto,
-      usarConocimientoLocal: $("usar-rag").checked,
-      usarBusquedaInternet: $("usar-internet").checked && state.internetHabilitada
-    };
-    const res = await api("/api/chat", { method: "POST", body: JSON.stringify(body) });
-    if (!res.ok) throw new Error(res.error || "Error desconocido");
+    let res;
+    try {
+      res = await consumirChatStream(body, (delta) => {
+        asistenteBubble.textContent += delta;
+        box.scrollTop = box.scrollHeight;
+      });
+    } catch (streamErr) {
+      asistenteBubble.textContent = "";
+      asistenteRow.remove();
+      res = await api("/api/chat", { method: "POST", body: JSON.stringify(body) });
+      if (!res.ok) throw new Error(res.error || streamErr.message || "Error desconocido");
+      appendBubble(inner, "assistant", res.respuesta);
+    }
+
+    if (res.ok === false) throw new Error(res.error || "Error desconocido");
     state.conversacionId = res.conversacionId;
-    appendBubble(inner, "assistant", res.respuesta);
+    if (!asistenteRow.isConnected) {
+      /* fallback ya pintó burbuja */
+    } else if (res.respuesta && asistenteBubble.textContent !== res.respuesta) {
+      asistenteBubble.textContent = res.respuesta;
+    }
     box.scrollTop = box.scrollHeight;
     if (res.avisos?.length) {
       appendBubble(inner, "system", res.avisos.join(" "), "aviso");
@@ -473,11 +567,7 @@ async function enviar(e) {
     if (tituloManual) await abrirConversacion(state.conversacionId);
     else renderListaEnlaces();
   } catch (err) {
-  if (!inner) {
-    inner = document.createElement("div");
-    inner.className = "mensajes-inner";
-    box.appendChild(inner);
-  }
+    if (asistenteRow.isConnected && !asistenteBubble.textContent) asistenteRow.remove();
     appendBubble(inner, "system", err.message || String(err), "system");
   } finally {
     state.enviando = false;

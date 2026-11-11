@@ -11,7 +11,7 @@ public sealed class WebSearchService
 
     public WebSearchService(IHttpClientFactory factory, IaPropiaOptions iaOpts)
     {
-        _http = factory.CreateClient("llm");
+        _http = factory.CreateClient("llm-web");
         _opts = iaOpts.InternetBusqueda;
     }
 
