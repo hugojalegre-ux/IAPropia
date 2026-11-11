@@ -42,19 +42,29 @@ Sin Access **no** publiques el túnel: la app no tiene login propio.
 - [ ] Política solo con tu(s) email(s)
 - [ ] Login probado en navegador de incógnito
 
-## Instalar cloudflared en Windows
+## Sin administrador + Git
+
+| En Git (subís / bajás con clone) | Solo en tu PC (no Git) |
+|----------------------------------|-------------------------|
+| Scripts `.ps1`, `docs/`, plantillas `config/*.example` | `tools/cloudflared/cloudflared.exe` (descarga) |
+| `Lib-Cloudflared.ps1` | `config/cloudflared.local/` (cert, config.yml, credenciales) |
+| `config/tunel.local.json.example` | `config/tunel.local.json` |
+| App `dist/`, `data/` (como siempre) | |
+
+En otra máquina: `git pull` → `.\Preparar-Cloudflared.ps1` (baja el exe) → si ya tenías túnel, copiás `cloudflared.local` o volvés a `Configurar-Tunel-Inicial.ps1`.
+
+Repo: https://github.com/hugojalegre-ux/IAPropia
+
+## Instalar cloudflared (portable, sin admin)
 
 ```powershell
 cd C:\Repositorio\RunnerIA\IAPropia
 .\Preparar-Cloudflared.ps1
 ```
 
-O manual:
+Descarga `tools\cloudflared\cloudflared.exe` desde GitHub (sin winget ni MSI).
 
-```powershell
-winget install Cloudflare.cloudflared --accept-package-agreements --accept-source-agreements
-cloudflared --version
-```
+Opcional con admin: `.\Preparar-Cloudflared.ps1 -UsarWinget`
 
 ## Crear túnel (una vez)
 
@@ -70,9 +80,9 @@ Eso guía:
 3. Copia de plantilla → `%USERPROFILE%\.cloudflared\config.yml`
 4. `cloudflared tunnel route dns ia-propia ia.tudominio.com`
 
-Plantilla en el repo: [`config/cloudflared.config.example.yml`](../config/cloudflared.config.example.yml).
+Plantilla: [`config/cloudflared.config.example.yml`](../config/cloudflared.config.example.yml).
 
-**No subas a Git** los archivos `*.json` de credenciales en `.cloudflared/`.
+La config vive en **`config/cloudflared.local/`** (gitignored). No subas credenciales ni `cert.pem`.
 
 ## Uso diario
 

@@ -1,0 +1,2 @@
+Configuración local del túnel (cert.pem, config.yml, credenciales *.json).
+Generada por Configurar-Tunel-Inicial.ps1 — NO subir a Git (carpeta gitignored).

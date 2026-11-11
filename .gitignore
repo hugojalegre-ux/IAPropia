@@ -4,6 +4,10 @@ dist/
 appsettings.secrets.json
 CONFIG-CLOUD.txt
 config/tunel.local.json
+config/cloudflared.local/cert.pem
+config/cloudflared.local/config.yml
+config/cloudflared.local/*.json
+tools/cloudflared/cloudflared.exe
 .cloudflared/
 *.cloudflared.json
 .env

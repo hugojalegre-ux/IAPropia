@@ -1,5 +1,5 @@
 {
-  "version": "1.1.4",
+  "version": "1.1.5",
   "nombre": "IA propia",
-  "notas": "Túnel Cloudflare: docs y scripts Preparar/Configurar/Iniciar/Verificar"
+  "notas": "cloudflared portable sin admin; config tunnel en config/cloudflared.local (gitignored)"
 }

@@ -1,4 +1,4 @@
-﻿# Inicia cloudflared hacia IA propia en 127.0.0.1:5077 (requiere config.yml).
+﻿# Inicia cloudflared hacia IA propia (config en config/cloudflared.local/, sin admin).
 param(
     [string]$TunnelName = 'ia-propia',
     [int]$PuertoLocal = 5077,
@@ -7,7 +7,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
-& (Join-Path $root 'Preparar-Cloudflared.ps1') -SoloComprobar | Out-Null
+. (Join-Path $root 'Lib-Cloudflared.ps1')
+
+$cloudflared = Resolve-IAPropiaCloudflaredExe -Root $root -InstalarSiFalta
+if (-not $cloudflared) {
+    Write-Error "cloudflared no disponible. Ejecutá .\Preparar-Cloudflared.ps1"
+}
 
 $localUrl = "http://127.0.0.1:$PuertoLocal"
 
@@ -20,7 +25,8 @@ if (-not $SinComprobarLocal) {
     }
 }
 
-$configPath = Join-Path $env:USERPROFILE '.cloudflared\config.yml'
+$configPath = Get-IAPropiaTunnelConfigPath -Root $root
+$certPath = Get-IAPropiaOriginCertPath -Root $root
 if (-not (Test-Path $configPath)) {
     Write-Error "Falta $configPath. Ejecutá .\Configurar-Tunel-Inicial.ps1"
 }
@@ -30,10 +36,14 @@ if (Test-Path $tunelLocal) {
     try {
         $j = Get-Content $tunelLocal -Raw | ConvertFrom-Json
         if ($j.hostname) {
-            Write-Host "URL publica esperada: https://$($j.hostname) (tras Cloudflare Access)"
+            Write-Host "URL publica esperada: https://$($j.hostname)"
         }
     } catch { }
 }
 
-Write-Host "Iniciando túnel '$TunnelName' (Ctrl+C para detener)..."
-cloudflared tunnel run $TunnelName
+Write-Host "Túnel '$TunnelName' (Ctrl+C para detener)..."
+if (Test-Path $certPath) {
+    & $cloudflared --origincert $certPath --config $configPath tunnel run $TunnelName
+} else {
+    & $cloudflared --config $configPath tunnel run $TunnelName
+}

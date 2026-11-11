@@ -17,7 +17,7 @@ Commits y `git push` de IA propia: siempre desde `C:\Repositorio\RunnerIA\IAProp
 
 ## Acceso desde celular / Internet (túnel seguro)
 
-HTTPS con dominio propio (Cloudflare Tunnel + Access). **Guía completa:** [`docs/TUNEL-CLOUDFLARE.md`](docs/TUNEL-CLOUDFLARE.md).
+HTTPS con dominio propio (Cloudflare Tunnel + Access). **Sin administrador:** `cloudflared` portable en `tools/cloudflared/`. **Guía:** [`docs/TUNEL-CLOUDFLARE.md`](docs/TUNEL-CLOUDFLARE.md).
 
 | Paso | Script |
 |------|--------|

@@ -1,0 +1,2 @@
+cloudflared.exe se descarga acá con Preparar-Cloudflared.ps1 (sin administrador).
+No se sube a Git (binario grande). En otra PC: git clone + Preparar-Cloudflared.ps1
