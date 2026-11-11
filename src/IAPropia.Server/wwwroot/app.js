@@ -9,13 +9,47 @@ const state = {
   chatsEnlace: [],
   relacionadasSel: new Set(),
   requiereApiKey: false,
-  headerApiKey: "X-IAPropia-Key"
+  headerApiKey: "X-IAPropia-Key",
+  faseEnvio: "generando"
 };
 
 const $ = (id) => document.getElementById(id);
 
 const THEME_KEY = "ia-propia-theme";
 const API_KEY_STORAGE = "ia-propia-api-key";
+const MODO_STORAGE = "ia-propia-modo-default";
+
+const MODOS_INTERACCION = [
+  { id: "ask", placeholder: "Preguntá algo directo…" },
+  { id: "plan", placeholder: "Describí qué querés lograr; armaré un plan…" },
+  { id: "multiplan", placeholder: "Contá el problema; prepararé opciones A / B / C…" },
+  { id: "agent", placeholder: "¿Qué tarea querés avanzar? Guío los próximos pasos…" },
+  { id: "debug", placeholder: "Describí el problema; mostraré diagnóstico y métricas…" }
+];
+
+function formatearDebugMetrics(debug) {
+  if (!debug) return "";
+  return [
+    "[métricas servidor — modo Debug]",
+    `duración: ${debug.duracionMs} ms`,
+    `modelo: ${debug.modelo} (${debug.proveedor})`,
+    `modo pesado: ${debug.modoPesado ? "sí" : "no"}`,
+    `chars mensaje / system: ${debug.caracteresMensaje} / ${debug.caracteresSystemAprox}`,
+    `fragmentos RAG / web / aprendizajes: ${debug.fragmentosConocimiento} / ${debug.fragmentosInternet} / ${debug.fragmentosAprendizajes}`,
+    `conversación: ${debug.conversacionId || "—"}`
+  ].join("\n");
+}
+
+function appendDebugMetrics(box, debug) {
+  if (!debug) return;
+  let inner = box.querySelector(".mensajes-inner");
+  if (!inner) {
+    inner = document.createElement("div");
+    inner.className = "mensajes-inner";
+    box.appendChild(inner);
+  }
+  appendBubble(inner, "system", formatearDebugMetrics(debug), "debug-metrics");
+}
 
 function getApiKeyGuardada() {
   return localStorage.getItem(API_KEY_STORAGE) || "";
@@ -32,6 +66,69 @@ function authHeaders(extra = {}) {
 function cargarApiKeyEnCampo() {
   const el = $("api-key-local");
   if (el && !el.value) el.value = getApiKeyGuardada();
+}
+
+function modoSeleccionado() {
+  const sel = $("modo-select");
+  if (sel && sel.offsetParent !== null) return sel.value || "ask";
+  return document.querySelector(".modo-btn.active")?.dataset.modo || "ask";
+}
+
+function aplicarModoUi(modo) {
+  const id = MODOS_INTERACCION.some((m) => m.id === modo) ? modo : "ask";
+  document.querySelectorAll(".modo-btn").forEach((btn) => {
+    const on = btn.dataset.modo === id;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  const sel = $("modo-select");
+  if (sel && sel.value !== id) sel.value = id;
+  const meta = MODOS_INTERACCION.find((m) => m.id === id) || MODOS_INTERACCION[0];
+  const input = $("input");
+  if (input && meta.placeholder) input.placeholder = meta.placeholder;
+}
+
+function initModoBar() {
+  aplicarModoUi(localStorage.getItem(MODO_STORAGE) || "ask");
+  document.querySelectorAll(".modo-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      aplicarModoUi(btn.dataset.modo);
+      localStorage.setItem(MODO_STORAGE, modoSeleccionado());
+    });
+  });
+  $("modo-select")?.addEventListener("change", () => {
+    aplicarModoUi($("modo-select").value);
+    localStorage.setItem(MODO_STORAGE, modoSeleccionado());
+  });
+}
+
+function renderAssistantContent(el, text, useMarkdown) {
+  if (!el) return;
+  const raw = text || "";
+  if (useMarkdown && window.SiltexMarkdown?.render) {
+    el.classList.add("md-on");
+    el.innerHTML = window.SiltexMarkdown.render(raw);
+  } else {
+    el.classList.remove("md-on");
+    el.textContent = raw;
+  }
+}
+
+function setSidebarAbierto(abierto) {
+  document.body.classList.toggle("sidebar-open", abierto);
+  const bd = $("sidebar-backdrop");
+  if (bd) {
+    bd.classList.toggle("hidden", !abierto);
+    bd.setAttribute("aria-hidden", abierto ? "false" : "true");
+  }
+}
+
+function initSidebarMobile() {
+  $("btn-sidebar")?.addEventListener("click", () => setSidebarAbierto(true));
+  $("sidebar-backdrop")?.addEventListener("click", () => setSidebarAbierto(false));
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") setSidebarAbierto(false);
+  });
 }
 
 function guardarApiKeyLocal() {
@@ -121,7 +218,8 @@ function appendBubble(box, role, content, variant) {
   }
   const div = document.createElement("div");
   div.className = "bubble " + (variant || role);
-  div.textContent = content;
+  if (role === "assistant") renderAssistantContent(div, content, true);
+  else div.textContent = content;
   row.appendChild(div);
   box.appendChild(row);
 }
@@ -163,7 +261,7 @@ function actualizarBotonEnviar() {
   const bloquear = !state.ollamaOk && !forzar;
   btn.disabled = state.enviando || bloquear;
   if (state.enviando) {
-    btn.textContent = "Generando…";
+    btn.textContent = state.faseEnvio === "preparando" ? "Preparando…" : "Generando…";
   } else {
     btn.textContent = "Enviar";
   }
@@ -190,7 +288,7 @@ function parseSseBlock(block) {
   }
 }
 
-async function consumirChatStream(body, onDelta) {
+async function consumirChatStream(body, onDelta, onStatus) {
   const res = await fetch("/api/chat/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -210,6 +308,7 @@ async function consumirChatStream(body, onDelta) {
   let buf = "";
   let donePayload = null;
   let streamError = null;
+  let statusMostrado = false;
 
   while (true) {
     const { value, done } = await reader.read();
@@ -220,7 +319,18 @@ async function consumirChatStream(body, onDelta) {
     for (const block of parts) {
       const ev = parseSseBlock(block);
       if (!ev) continue;
-      if (ev.event === "token" && ev.data?.delta) onDelta(ev.data.delta);
+      if (ev.event === "status" && ev.data) {
+        if (ev.data.phase) state.faseEnvio = ev.data.phase;
+        if (onStatus) onStatus(ev.data);
+        statusMostrado = true;
+        actualizarBotonEnviar();
+      }
+      if (ev.event === "token" && ev.data?.delta) {
+        state.faseEnvio = "generando";
+        actualizarBotonEnviar();
+        onDelta(ev.data.delta, { clearStatus: statusMostrado });
+        statusMostrado = false;
+      }
       if (ev.event === "done") donePayload = ev.data;
       if (ev.event === "error") streamError = ev.data?.error || "Error en stream";
     }
@@ -242,7 +352,8 @@ function cuerpoChat(texto, tituloManual) {
     mensaje: texto,
     usarConocimientoLocal: $("usar-rag").checked,
     usarBusquedaInternet: $("usar-internet").checked && state.internetHabilitada,
-    modoPesado: $("modo-pesado").checked
+    modoPesado: $("modo-pesado").checked,
+    modoInteraccion: modoSeleccionado()
   };
 }
 
@@ -298,7 +409,17 @@ function rellenarCarpetas(carpetas) {
   }
 }
 
+function aplicarMarcaDesdeEstado(est) {
+  const nombre = est?.nombre?.trim();
+  if (nombre) {
+    const h1 = $("brand-title");
+    if (h1) h1.textContent = nombre;
+    document.title = nombre;
+  }
+}
+
 function pintarFooterEstado(est, ollamaHealth) {
+  aplicarMarcaDesdeEstado(est);
   const el = $("estado-servicio");
   const ver = est?.version ? `v${est.version}` : "";
   state.internetHabilitada = !!est?.internetBusquedaHabilitada;
@@ -472,6 +593,7 @@ async function cargarAprendizajes() {
 }
 
 async function abrirConversacion(id) {
+  if (window.matchMedia("(max-width: 768px)").matches) setSidebarAbierto(false);
   state.conversacionId = id;
   const doc = await api("/api/conversaciones/" + encodeURIComponent(id));
   $("titulo-chat").value = doc.titulo || "";
@@ -480,6 +602,9 @@ async function abrirConversacion(id) {
     state.carpetaId = doc.carpetaId;
     if ([...$("carpeta").options].some((o) => o.value === doc.carpetaId)) $("carpeta").value = doc.carpetaId;
   }
+  const modo = doc.modoInteraccion || "ask";
+  aplicarModoUi(modo);
+  localStorage.setItem(MODO_STORAGE, modo);
   renderMensajes(doc.mensajes);
   await cargarConversaciones();
   await cargarAprendizajes();
@@ -490,6 +615,7 @@ function nuevaConversacion() {
   $("titulo-chat").value = "";
   state.relacionadasSel = new Set();
   $("relacionadas").value = "";
+  aplicarModoUi(localStorage.getItem(MODO_STORAGE) || "ask");
   renderMensajes([]);
   cargarConversaciones();
   renderListaEnlaces();
@@ -551,6 +677,7 @@ async function enviar(e) {
   if (!texto) return;
 
   state.enviando = true;
+  state.faseEnvio = "preparando";
   actualizarBotonEnviar();
 
   const box = $("mensajes");
@@ -583,15 +710,34 @@ async function enviar(e) {
   asistenteRow.appendChild(asistenteBubble);
   inner.appendChild(asistenteRow);
 
+  let placeholderActivo = false;
+  let streamBuf = "";
+
   try {
     let res;
     try {
-      res = await consumirChatStream(body, (delta) => {
-        asistenteBubble.textContent += delta;
-        box.scrollTop = box.scrollHeight;
-      });
+      res = await consumirChatStream(
+        body,
+        (delta, opts) => {
+          if (opts?.clearStatus && placeholderActivo) {
+            streamBuf = "";
+            renderAssistantContent(asistenteBubble, "", false);
+            placeholderActivo = false;
+          }
+          streamBuf += delta;
+          renderAssistantContent(asistenteBubble, streamBuf, false);
+          box.scrollTop = box.scrollHeight;
+        },
+        (st) => {
+          if (st.mensaje && !streamBuf) {
+            renderAssistantContent(asistenteBubble, st.mensaje, false);
+            asistenteBubble.classList.add("placeholder");
+            placeholderActivo = true;
+          }
+        }
+      );
     } catch (streamErr) {
-      asistenteBubble.textContent = "";
+      streamBuf = "";
       asistenteRow.remove();
       res = await api("/api/chat", { method: "POST", body: JSON.stringify(body) });
       if (!res.ok) throw new Error(res.error || streamErr.message || "Error desconocido");
@@ -602,21 +748,25 @@ async function enviar(e) {
     state.conversacionId = res.conversacionId;
     if (!asistenteRow.isConnected) {
       /* fallback ya pintó burbuja */
-    } else if (res.respuesta && asistenteBubble.textContent !== res.respuesta) {
-      asistenteBubble.textContent = res.respuesta;
+    } else {
+      const finalText = res.respuesta || streamBuf;
+      if (finalText) renderAssistantContent(asistenteBubble, finalText, true);
     }
     box.scrollTop = box.scrollHeight;
     if (res.avisos?.length) {
       appendBubble(inner, "system", res.avisos.join(" "), "aviso");
     }
+    appendDebugMetrics(box, res.debug);
     await cargarConversaciones();
     if (tituloManual) await abrirConversacion(state.conversacionId);
     else renderListaEnlaces();
   } catch (err) {
-    if (asistenteRow.isConnected && !asistenteBubble.textContent) asistenteRow.remove();
+    if (asistenteRow.isConnected && !streamBuf && !asistenteBubble.textContent) asistenteRow.remove();
     appendBubble(inner, "system", err.message || String(err), "system");
   } finally {
     state.enviando = false;
+    state.faseEnvio = "generando";
+    asistenteBubble?.classList?.remove("placeholder");
     actualizarBotonEnviar();
   }
 }
@@ -652,6 +802,8 @@ $("input").addEventListener("keydown", (ev) => {
 });
 
 initTema();
+initModoBar();
+initSidebarMobile();
 cargarApiKeyEnCampo();
 
 (async () => {

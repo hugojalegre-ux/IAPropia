@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
-  "nombre": "IA propia",
-  "notas": "Seguridad: API key, Cloudflare Access JWT, rate limit, localhost, docs SEGURIDAD"
+  "version": "1.3.5",
+  "nombre": "Siltex",
+  "notas": "UI: markdown en respuestas, menú móvil, modos compactos, columna alineada"
 }

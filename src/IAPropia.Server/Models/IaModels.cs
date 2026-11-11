@@ -4,7 +4,7 @@ public sealed class IaPropiaOptions
 {
     public const string Section = "IAPropia";
 
-    public string Titulo { get; set; } = "IA propia";
+    public string Titulo { get; set; } = "Siltex";
     public int PuertoPreferido { get; set; } = 5077;
     public string ProveedorPorDefecto { get; set; } = "ollama";
     public OllamaOptions Ollama { get; set; } = new();
@@ -47,6 +47,9 @@ public sealed class InternetBusquedaOptions
 {
     public bool Habilitada { get; set; } = true;
     public int MaxFragmentos { get; set; } = 4;
+    public bool UsarRespaldoHtml { get; set; } = true;
+    public int MaxCaracteresConsulta { get; set; } = 120;
+    public int MaxCaracteresFragmento { get; set; } = 400;
 }
 
 public sealed class ChatsOptions
@@ -115,6 +118,23 @@ public sealed class ChatRequest
     public bool UsarBusquedaInternet { get; set; }
     public bool ModoPesado { get; set; }
     public bool UsarStreaming { get; set; } = true;
+
+    /// <summary>ask | plan | multiplan | agent | debug (estilo Cursor).</summary>
+    public string? ModoInteraccion { get; set; }
+}
+
+public sealed class ChatDebugInfo
+{
+    public long DuracionMs { get; set; }
+    public string Modelo { get; set; } = "";
+    public string Proveedor { get; set; } = "";
+    public bool ModoPesado { get; set; }
+    public int CaracteresMensaje { get; set; }
+    public int CaracteresSystemAprox { get; set; }
+    public int FragmentosConocimiento { get; set; }
+    public int FragmentosInternet { get; set; }
+    public int FragmentosAprendizajes { get; set; }
+    public string ConversacionId { get; set; } = "";
 }
 
 public sealed class ChatResponse
@@ -129,6 +149,8 @@ public sealed class ChatResponse
     public int FragmentosInternet { get; set; }
     public int FragmentosAprendizajes { get; set; }
     public List<string> Avisos { get; set; } = [];
+    public string ModoInteraccion { get; set; } = "ask";
+    public ChatDebugInfo? Debug { get; set; }
 }
 
 public sealed class ConversacionResumen
@@ -154,6 +176,8 @@ public sealed class ConversacionDoc
     public List<string> AprendizajeIds { get; set; } = [];
     public string CreadaUtc { get; set; } = "";
     public string ActualizadaUtc { get; set; } = "";
+
+    public string ModoInteraccion { get; set; } = "ask";
 }
 
 public sealed class CarpetaChatDef
@@ -179,6 +203,7 @@ public sealed class ConversacionMetaRequest
     public string? Titulo { get; set; }
     public string? CarpetaId { get; set; }
     public List<string>? RelacionadasIds { get; set; }
+    public string? ModoInteraccion { get; set; }
 }
 
 public sealed class AprendizajeRequest
@@ -192,7 +217,7 @@ public sealed class AprendizajeRequest
 
 public sealed class EstadoServicioDto
 {
-    public string Nombre { get; set; } = "IA propia";
+    public string Nombre { get; set; } = "Siltex";
     public string Version { get; set; } = "1.0.0";
     public string Alcance { get; set; } =
         "Asistente personal local. Sin vínculo con SOT Accusys ni RunnerIA obligatorio.";

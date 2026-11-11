@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IA propia</title>
+  <title>Siltex</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <script>
     (function () {
       var key = "ia-propia-theme";
@@ -19,12 +20,26 @@
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <header class="brand">
-        <div class="brand-mark" aria-hidden="true">✦</div>
+        <div class="brand-mark" aria-hidden="true">
+          <svg class="brand-icon" viewBox="0 0 32 32" focusable="false" aria-hidden="true">
+            <defs>
+              <linearGradient id="siltex-mark-bg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="var(--brand-gradient-a)"/>
+                <stop offset="100%" stop-color="var(--brand-gradient-b)"/>
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="8" fill="url(#siltex-mark-bg)"/>
+            <rect x="6" y="7" width="20" height="2.8" rx="1.4" fill="currentColor" opacity="0.95"/>
+            <rect x="6" y="12.2" width="20" height="2.8" rx="1.4" fill="currentColor" opacity="0.72"/>
+            <rect x="6" y="17.4" width="20" height="2.8" rx="1.4" fill="currentColor" opacity="0.52"/>
+            <rect x="6" y="22.6" width="13" height="2.8" rx="1.4" fill="currentColor" opacity="0.36"/>
+          </svg>
+        </div>
         <div class="brand-text">
-          <h1>IA propia</h1>
-          <p class="tagline">Tu asistente en la PC</p>
+          <h1 id="brand-title">Siltex</h1>
+          <p class="tagline" id="brand-tagline">Capas de charlas y notas, en tu PC</p>
         </div>
         <div class="theme-switch" role="group" aria-label="Tema de la interfaz">
           <button type="button" class="theme-btn" data-theme="light" id="theme-light" title="Tema claro">☀</button>
@@ -60,7 +75,7 @@
               <input type="checkbox" id="usar-rag" checked />
               <span>Usar mis notas locales</span>
             </label>
-            <label class="check" title="DuckDuckGo aporta contexto no verificado; puede incluir contenido engañoso">
+            <label class="check" title="DuckDuckGo (JSON + HTML). No es Google; puede fallar o ser irrelevante — el modelo debe avisar si no hay datos.">
               <input type="checkbox" id="usar-internet" />
               <span>Buscar en internet antes de responder</span>
             </label>
@@ -93,8 +108,19 @@
       <footer class="estado estado-pill" id="estado-servicio" title="Estado de Ollama"></footer>
     </aside>
 
+    <div id="sidebar-backdrop" class="sidebar-backdrop hidden" aria-hidden="true"></div>
+
     <main class="chat">
       <header class="chat-toolbar">
+        <button
+          type="button"
+          id="btn-sidebar"
+          class="btn icon-btn sidebar-toggle"
+          aria-label="Abrir panel de charlas"
+          title="Charlas y carpetas"
+        >
+          <span aria-hidden="true">☰</span>
+        </button>
         <input
           id="titulo-chat"
           class="titulo-input"
@@ -128,19 +154,39 @@
       <div id="mensajes" class="mensajes" role="log" aria-live="polite"></div>
 
       <form id="form-chat" class="composer">
-        <div class="composer-inner">
-          <textarea
-            id="input"
-            rows="2"
-            placeholder="Escribí lo que quieras preguntar o contar…"
-            required
-            aria-label="Mensaje"
-          ></textarea>
-          <button type="submit" class="btn primary btn-send" id="btn-enviar">Enviar</button>
+        <div class="composer-wrap">
+          <div class="modo-row">
+            <label class="field-label modo-select-label" for="modo-select">Modo</label>
+            <select id="modo-select" class="modo-select" aria-label="Modo de interacción">
+              <option value="ask">Preguntar</option>
+              <option value="plan">Plan</option>
+              <option value="multiplan">Multi-plan</option>
+              <option value="agent">Agente</option>
+              <option value="debug">Debug</option>
+            </select>
+            <div class="modo-bar" role="tablist" aria-label="Modo (estilo Cursor)">
+              <button type="button" class="modo-btn active" data-modo="ask" role="tab" aria-selected="true" title="Respuesta directa, sin plan largo">Preguntar</button>
+              <button type="button" class="modo-btn" data-modo="plan" role="tab" aria-selected="false" title="Plan paso a paso antes de actuar">Plan</button>
+              <button type="button" class="modo-btn" data-modo="multiplan" role="tab" aria-selected="false" title="Opciones A / B / C con trade-offs">Multi-plan</button>
+              <button type="button" class="modo-btn" data-modo="agent" role="tab" aria-selected="false" title="Guía proactiva con siguientes pasos">Agente</button>
+              <button type="button" class="modo-btn modo-btn-debug" data-modo="debug" role="tab" aria-selected="false" title="Razonamiento visible + métricas del servidor">Debug</button>
+            </div>
+          </div>
+          <div class="composer-inner">
+            <textarea
+              id="input"
+              rows="2"
+              placeholder="Escribí lo que quieras preguntar o contar…"
+              required
+              aria-label="Mensaje"
+            ></textarea>
+            <button type="submit" class="btn primary btn-send" id="btn-enviar">Enviar</button>
+          </div>
         </div>
       </form>
     </main>
   </div>
+  <script src="markdown-lite.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

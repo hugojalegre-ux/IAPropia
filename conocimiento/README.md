@@ -1,4 +1,4 @@
-# IA propia — conocimiento local
+# Siltex — conocimiento local
 
 Esta carpeta alimenta el asistente con **texto tuyo** (`.md`, `.txt`, `.json`).
 
@@ -8,7 +8,7 @@ Esta carpeta alimenta el asistente con **texto tuyo** (`.md`, `.txt`, `.json`).
 
 ## Ejemplo
 
-Preguntá: «¿Cuál es la misión del proyecto IA propia?»  
+Preguntá: «¿Cuál es la misión del proyecto Siltex?»  
 El servidor buscará en este archivo y en el resto de la carpeta.
 
 **Misión:** asistente personal local, portable, con Ollama u OpenAI-compatible, personas editables y historial en `data/conversaciones/`.

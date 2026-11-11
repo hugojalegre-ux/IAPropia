@@ -1,6 +1,6 @@
-# IA propia
+# Siltex
 
-Proyecto **autónomo**: asistente personal con UI web, historial local y conocimiento en archivos. **No depende de AutomatizacionSOT ni de SOT Accusys**.
+**Siltex** es el asistente personal (UI web, historial local, conocimiento en archivos). El código vive en el repo **IAPropia**. **No depende de AutomatizacionSOT ni de SOT Accusys**.
 
 **GitHub:** [github.com/hugojalegre-ux/IAPropia](https://github.com/hugojalegre-ux/IAPropia) (cuenta [hugojalegre-ux](https://github.com/hugojalegre-ux)).
 
@@ -136,7 +136,7 @@ En la UI: **carpeta**, **título**, **chats relacionados** (lista con casillas; 
 
 | Pieza | Descripción |
 |-------|-------------|
-| **API + UI** | `IAPropia.Server` en puerto **5077** |
+| **API + UI** | `IAPropia.Server` en puerto **5077**; modos **Preguntar / Plan / Multi-plan / Agente / Debug** (estilo Cursor) |
 | **Health** | `GET /api/health`, `/api/health/ollama`, resumen en `GET /api/estado` |
 | **Versión** | [`version.json`](version.json) → campo `version` en `/api/estado` |
 | **Personas** | `config/personas/*.json` |

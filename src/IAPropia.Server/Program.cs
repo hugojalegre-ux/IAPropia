@@ -71,7 +71,10 @@ builder.Services.AddHttpClient("ollama", c =>
 builder.Services.AddHttpClient("llm-web", c =>
 {
     c.Timeout = TimeSpan.FromSeconds(timeoutWeb);
-    c.MaxResponseContentBufferSize = 256 * 1024;
+    c.MaxResponseContentBufferSize = 512 * 1024;
+    c.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
+        "Siltex/1.0 (asistente local; +https://github.com/hugojalegre-ux/IAPropia)");
+    c.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "es-AR,es;q=0.9,en;q=0.5");
 });
 
 var timeoutNormal = Math.Clamp(iaOpts.Limites.TimeoutSegundos, 30, timeoutMax);

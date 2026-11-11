@@ -87,6 +87,8 @@ public sealed class ConversationStore
             doc.CarpetaId = AppPaths.SanitizeSlug(meta.CarpetaId);
         if (meta.RelacionadasIds != null)
             doc.RelacionadasIds = meta.RelacionadasIds.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
+        if (!string.IsNullOrWhiteSpace(meta.ModoInteraccion))
+            doc.ModoInteraccion = ModoInteraccionHelper.Normalizar(meta.ModoInteraccion);
 
         if (!doc.CarpetaId.Equals(carpetaAnterior, StringComparison.OrdinalIgnoreCase))
         {
