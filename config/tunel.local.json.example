@@ -1,0 +1,6 @@
+{
+  "hostname": "ia.tudominio.com",
+  "tunnelName": "ia-propia",
+  "localUrl": "http://127.0.0.1:5077",
+  "notas": "Copiar a tunel.local.json (gitignored) para Verificar-Tunel-IAPropia.ps1"
+}

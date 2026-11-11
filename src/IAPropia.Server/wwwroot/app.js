@@ -12,6 +12,37 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
+const THEME_KEY = "ia-propia-theme";
+
+function temaResuelto(mode) {
+  if (mode === "dark") return "dark";
+  if (mode === "light") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function aplicarTema(mode) {
+  const m = mode || localStorage.getItem(THEME_KEY) || "system";
+  localStorage.setItem(THEME_KEY, m);
+  const resolved = temaResuelto(m);
+  document.documentElement.setAttribute("data-theme", resolved);
+  document.documentElement.setAttribute("data-theme-mode", m);
+  document.querySelectorAll(".theme-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.theme === m);
+    btn.setAttribute("aria-pressed", btn.dataset.theme === m ? "true" : "false");
+  });
+}
+
+function initTema() {
+  aplicarTema(localStorage.getItem(THEME_KEY) || "system");
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    const mode = localStorage.getItem(THEME_KEY) || "system";
+    if (mode === "system") aplicarTema("system");
+  });
+  document.querySelectorAll(".theme-btn").forEach((btn) => {
+    btn.addEventListener("click", () => aplicarTema(btn.dataset.theme));
+  });
+}
+
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
@@ -44,19 +75,43 @@ function setRelacionadasFromDoc(ids) {
   renderListaEnlaces();
 }
 
+function appendBubble(box, role, content, variant) {
+  const row = document.createElement("div");
+  row.className = "msg-row " + (role === "user" ? "user" : role === "assistant" ? "assistant" : "system");
+  if (role === "user" || role === "assistant") {
+    const label = document.createElement("span");
+    label.className = "msg-label";
+    label.textContent = role === "user" ? "Vos" : "Asistente";
+    row.appendChild(label);
+  }
+  const div = document.createElement("div");
+  div.className = "bubble " + (variant || role);
+  div.textContent = content;
+  row.appendChild(div);
+  box.appendChild(row);
+}
+
 function renderMensajes(mensajes) {
   const box = $("mensajes");
   box.innerHTML = "";
   if (!mensajes?.length) {
-    box.innerHTML =
-      '<div class="bubble system">Cerebro: Ollama en tu PC (sin API de pago). Marcá «Buscar en internet» si querés contexto web antes de responder.</div>';
+    box.innerHTML = `
+      <div class="welcome-card">
+        <h2>¿En qué te ayudo?</h2>
+        <p>Respondo con el modelo de tu PC (Ollama). Tus charlas y aprendizajes quedan guardados en esta carpeta.</p>
+        <ul>
+          <li>Elegí una <strong>carpeta</strong> a la izquierda para organizar temas.</li>
+          <li>Opcional: activá <strong>buscar en internet</strong> en Ajustes del modelo.</li>
+          <li>Después podés <strong>guardar un aprendizaje</strong> desde «Organizar charla».</li>
+        </ul>
+      </div>`;
     return;
   }
+  const inner = document.createElement("div");
+  inner.className = "mensajes-inner";
+  box.appendChild(inner);
   for (const m of mensajes) {
-    const div = document.createElement("div");
-    div.className = "bubble " + (m.role === "user" ? "user" : "assistant");
-    div.textContent = m.content;
-    box.appendChild(div);
+    appendBubble(inner, m.role === "user" ? "user" : "assistant", m.content, m.role);
   }
   box.scrollTop = box.scrollHeight;
 }
@@ -137,12 +192,14 @@ function pintarFooterEstado(est, ollamaHealth) {
 
   if (ollamaHealth) {
     state.ollamaOk = !!ollamaHealth.ok;
-    const extra = state.internetHabilitada ? " · internet opcional" : " · internet deshabilitada";
-    el.textContent = [ver, ollamaHealth.mensaje + extra].filter(Boolean).join(" · ");
-    el.className = "estado " + (ollamaHealth.ok ? "ok" : "warn");
+    const punto = ollamaHealth.ok ? "●" : "○";
+    const corto = ollamaHealth.ok ? "Ollama listo" : "Ollama: revisá el modelo";
+    el.textContent = [ver, `${punto} ${corto}`].filter(Boolean).join(" · ");
+    el.title = ollamaHealth.mensaje || "";
+    el.className = "estado estado-pill " + (ollamaHealth.ok ? "ok" : "warn");
   } else {
-    el.textContent = [ver, "Sin datos de Ollama"].filter(Boolean).join(" · ");
-    el.className = "estado warn";
+    el.textContent = [ver, "○ Sin datos de Ollama"].filter(Boolean).join(" · ");
+    el.className = "estado estado-pill warn";
   }
   actualizarBotonEnviar();
 }
@@ -191,7 +248,8 @@ function renderListaEnlaces() {
   box.innerHTML = "";
   const items = (state.chatsEnlace || []).filter((c) => c.id !== state.conversacionId);
   if (items.length === 0) {
-    box.innerHTML = '<p class="hint">No hay otros chats en esta vista. Probá «Todas las carpetas» o creá otro chat.</p>';
+    box.innerHTML =
+      '<p class="hint">Acá aparecerán tus otras charlas. Si no ves ninguna, marcá «todas las carpetas» o empezá otro hilo.</p>';
     return;
   }
   for (const c of items) {
@@ -250,7 +308,8 @@ async function cargarAprendizajes() {
   const ul = $("lista-aprendizajes");
   ul.innerHTML = "";
   if (!list.length) {
-    ul.innerHTML = '<li class="apr-empty">Sin aprendizajes en esta carpeta.</li>';
+    ul.innerHTML =
+      '<li class="apr-empty">Todavía no guardaste aprendizajes aquí. Usá «Guardar aprendizaje» cuando resuelvas algo que quieras repetir.</li>';
     return;
   }
   for (const a of list) {
@@ -373,12 +432,17 @@ async function enviar(e) {
   actualizarBotonEnviar();
 
   const box = $("mensajes");
-  if (box.querySelector(".bubble.system")) box.innerHTML = "";
+  const welcome = box.querySelector(".welcome-card");
+  if (welcome) box.innerHTML = "";
 
-  const userBubble = document.createElement("div");
-  userBubble.className = "bubble user";
-  userBubble.textContent = texto;
-  box.appendChild(userBubble);
+  let inner = box.querySelector(".mensajes-inner");
+  if (!inner) {
+    inner = document.createElement("div");
+    inner.className = "mensajes-inner";
+    box.appendChild(inner);
+  }
+
+  appendBubble(inner, "user", texto);
 
   $("input").value = "";
 
@@ -400,25 +464,21 @@ async function enviar(e) {
     const res = await api("/api/chat", { method: "POST", body: JSON.stringify(body) });
     if (!res.ok) throw new Error(res.error || "Error desconocido");
     state.conversacionId = res.conversacionId;
-    const ast = document.createElement("div");
-    ast.className = "bubble assistant";
-    ast.textContent = res.respuesta;
-    box.appendChild(ast);
+    appendBubble(inner, "assistant", res.respuesta);
     box.scrollTop = box.scrollHeight;
     if (res.avisos?.length) {
-      const av = document.createElement("div");
-      av.className = "bubble system";
-      av.textContent = res.avisos.join(" ");
-      box.appendChild(av);
+      appendBubble(inner, "system", res.avisos.join(" "), "aviso");
     }
     await cargarConversaciones();
     if (tituloManual) await abrirConversacion(state.conversacionId);
     else renderListaEnlaces();
   } catch (err) {
-    const errBubble = document.createElement("div");
-    errBubble.className = "bubble system";
-    errBubble.textContent = err.message || String(err);
-    box.appendChild(errBubble);
+  if (!inner) {
+    inner = document.createElement("div");
+    inner.className = "mensajes-inner";
+    box.appendChild(inner);
+  }
+    appendBubble(inner, "system", err.message || String(err), "system");
   } finally {
     state.enviando = false;
     actualizarBotonEnviar();
@@ -437,12 +497,24 @@ $("carpeta").addEventListener("change", () => {
   cargarAprendizajes();
 });
 $("forzar-envio").addEventListener("change", actualizarBotonEnviar);
+
+document.querySelectorAll(".sidebar-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".sidebar-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    const id = tab.dataset.tab;
+    $("pane-historial").classList.toggle("hidden", id !== "historial");
+    $("pane-aprendizajes").classList.toggle("hidden", id !== "aprendizajes");
+  });
+});
 $("input").addEventListener("keydown", (ev) => {
   if (ev.key === "Enter" && !ev.shiftKey) {
     ev.preventDefault();
     $("form-chat").requestSubmit();
   }
 });
+
+initTema();
 
 (async () => {
   try {

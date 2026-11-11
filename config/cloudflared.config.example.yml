@@ -1,0 +1,15 @@
+# Copiar a %USERPROFILE%\.cloudflared\config.yml y completar.
+# NO commitear credenciales ni este archivo si ya tiene UUID reales.
+#
+# Comandos previos:
+#   cloudflared tunnel login
+#   cloudflared tunnel create ia-propia
+#   cloudflared tunnel route dns ia-propia ia.TUDOMINIO.com
+
+tunnel: REEMPLAZAR_TUNNEL_UUID_O_NOMBRE_ia-propia
+credentials-file: C:\Users\TU_USUARIO\.cloudflared\REEMPLAZAR_UUID.json
+
+ingress:
+  - hostname: ia.TUDOMINIO.com
+    service: http://127.0.0.1:5077
+  - service: http_status:404

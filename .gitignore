@@ -3,6 +3,9 @@ dist/
 *.secrets.json
 appsettings.secrets.json
 CONFIG-CLOUD.txt
+config/tunel.local.json
+.cloudflared/
+*.cloudflared.json
 .env
 .env.*
 bin/

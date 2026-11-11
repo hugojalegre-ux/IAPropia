@@ -15,6 +15,20 @@ Este repositorio **contiene únicamente** la carpeta/proyecto **IAPropia**. No i
 
 Commits y `git push` de IA propia: siempre desde `C:\Repositorio\RunnerIA\IAPropia`. Para otros proyectos, volvé a la cuenta que corresponda (`gh auth switch -u HugoAlegre` si empujás RunnerIA).
 
+## Acceso desde celular / Internet (túnel seguro)
+
+HTTPS con dominio propio (Cloudflare Tunnel + Access). **Guía completa:** [`docs/TUNEL-CLOUDFLARE.md`](docs/TUNEL-CLOUDFLARE.md).
+
+| Paso | Script |
+|------|--------|
+| Instalar `cloudflared` | `.\Preparar-Cloudflared.ps1` |
+| Configuración inicial (una vez) | `.\Configurar-Tunel-Inicial.ps1` |
+| Local (siempre primero) | `Iniciar-IAPropia.bat` → http://127.0.0.1:5077 |
+| Túnel diario | `.\Iniciar-Tunel-IAPropia.ps1` o `Iniciar-Tunel-IAPropia.bat` |
+| Verificar | `.\Verificar-Tunel-IAPropia.ps1` |
+
+URL pública: la definís vos (ej. `https://ia.tudominio.com`) tras dominio + Access en Cloudflare.
+
 ## Arranque recomendado (único camino)
 
 1. Doble clic en **`Iniciar-IAPropia.bat`** en la raíz del proyecto (o `.\Iniciar-IAPropia.ps1`).

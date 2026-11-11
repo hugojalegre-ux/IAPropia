@@ -4,83 +4,133 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IA propia</title>
+  <script>
+    (function () {
+      var key = "ia-propia-theme";
+      var mode = localStorage.getItem(key) || "system";
+      var dark =
+        mode === "dark" ||
+        (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme-mode", mode);
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <header class="brand">
-        <h1>IA propia</h1>
-        <p class="tagline">Ollama local · internet solo para buscar</p>
+        <div class="brand-mark" aria-hidden="true">✦</div>
+        <div class="brand-text">
+          <h1>IA propia</h1>
+          <p class="tagline">Tu asistente en la PC</p>
+        </div>
+        <div class="theme-switch" role="group" aria-label="Tema de la interfaz">
+          <button type="button" class="theme-btn" data-theme="light" id="theme-light" title="Tema claro">☀</button>
+          <button type="button" class="theme-btn" data-theme="dark" id="theme-dark" title="Tema oscuro">☾</button>
+          <button type="button" class="theme-btn" data-theme="system" id="theme-system" title="Igual que Windows">Auto</button>
+        </div>
       </header>
-      <button type="button" id="btn-nueva" class="btn primary block">Nueva conversación</button>
-      <section class="panel">
-        <h2>Carpeta</h2>
-        <select id="carpeta"></select>
-        <button type="button" id="btn-nueva-carpeta" class="btn subtle block">Nueva carpeta…</button>
-      </section>
-      <section class="panel">
-        <h2>Persona</h2>
-        <select id="persona"></select>
-      </section>
-      <section class="panel">
-        <h2>Modelo (Ollama)</h2>
-        <select id="modelo-select"></select>
-        <details class="modelo-avanzado">
-          <summary>Otro modelo (texto)</summary>
-          <input id="modelo-custom" type="text" placeholder="ej. llama3.2" />
-        </details>
-        <label class="check">
-          <input type="checkbox" id="usar-rag" checked />
-          Usar conocimiento local
-        </label>
-        <label class="check">
-          <input type="checkbox" id="usar-internet" />
-          Buscar en internet (DuckDuckGo)
-        </label>
-        <label class="check">
-          <input type="checkbox" id="forzar-envio" />
-          Enviar sin preflight (avanzado)
-        </label>
-      </section>
-      <section class="panel panel-grow">
-        <h2>Historial</h2>
-        <ul id="lista-conversaciones" class="conv-list"></ul>
-      </section>
-      <section class="panel panel-grow panel-aprendizajes">
-        <h2>Aprendizajes <span id="aprendizajes-count" class="badge"></span></h2>
-        <ul id="lista-aprendizajes" class="apr-list"></ul>
-      </section>
-      <footer class="estado" id="estado-servicio"></footer>
-    </aside>
-    <main class="chat">
-      <header class="chat-header">
-        <label class="field-label" for="titulo-chat">Título del chat</label>
-        <input id="titulo-chat" type="text" placeholder="Ej. Análisis runner QA — 28/10" />
-        <div class="enlaces-block">
-          <div class="enlaces-head">
-            <span class="field-label">Chats relacionados</span>
-            <label class="check check-inline">
-              <input type="checkbox" id="enlace-todas-carpetas" />
-              Todas las carpetas
+
+      <button type="button" id="btn-nueva" class="btn primary block">+ Nueva charla</button>
+
+      <div class="card card-compact">
+        <label class="field-label" for="carpeta">Carpeta del proyecto</label>
+        <select id="carpeta" title="Agrupá tus charlas por tema"></select>
+        <button type="button" id="btn-nueva-carpeta" class="btn link">Crear otra carpeta</button>
+      </div>
+
+      <details class="card card-fold">
+        <summary>Ajustes del modelo</summary>
+        <div class="card-body">
+          <label class="field-label" for="persona">Persona</label>
+          <select id="persona"></select>
+          <label class="field-label" for="modelo-select">Modelo Ollama</label>
+          <select id="modelo-select"></select>
+          <details class="modelo-avanzado">
+            <summary>Otro modelo (escribir)</summary>
+            <input id="modelo-custom" type="text" placeholder="ej. llama3.2" />
+          </details>
+          <div class="checks-group">
+            <label class="check">
+              <input type="checkbox" id="usar-rag" checked />
+              <span>Usar mis notas locales</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="usar-internet" />
+              <span>Buscar en internet antes de responder</span>
+            </label>
+            <label class="check check-muted">
+              <input type="checkbox" id="forzar-envio" />
+              <span>Enviar aunque Ollama no esté listo</span>
             </label>
           </div>
-          <p class="hint">Marcá chats para reutilizar su contexto y aprendizajes en este hilo.</p>
-          <div id="lista-enlaces" class="enlace-list" aria-label="Chats para enlazar"></div>
-          <details class="ids-avanzado">
-            <summary>IDs manual (avanzado)</summary>
-            <input id="relacionadas" type="text" placeholder="ids adicionales separados por coma" />
-          </details>
         </div>
-        <div class="chat-actions">
-          <button type="button" id="btn-guardar-meta" class="btn subtle">Guardar título / enlaces</button>
-          <button type="button" id="btn-aprendizaje" class="btn subtle">Guardar aprendizaje…</button>
-        </div>
+      </details>
+
+      <div class="sidebar-tabs" role="tablist">
+        <button type="button" class="sidebar-tab active" data-tab="historial" role="tab">Charlas</button>
+        <button type="button" class="sidebar-tab" data-tab="aprendizajes" role="tab">
+          Aprendizajes <span id="aprendizajes-count" class="badge"></span>
+        </button>
+      </div>
+
+      <section id="pane-historial" class="pane scroll-pane" role="tabpanel">
+        <ul id="lista-conversaciones" class="conv-list"></ul>
+      </section>
+      <section id="pane-aprendizajes" class="pane scroll-pane hidden" role="tabpanel">
+        <ul id="lista-aprendizajes" class="apr-list"></ul>
+      </section>
+
+      <footer class="estado estado-pill" id="estado-servicio" title="Estado de Ollama"></footer>
+    </aside>
+
+    <main class="chat">
+      <header class="chat-toolbar">
+        <input
+          id="titulo-chat"
+          class="titulo-input"
+          type="text"
+          placeholder="Nombre de esta charla (opcional)"
+          aria-label="Título de la charla"
+        />
+        <details class="organizar-panel" id="panel-organizar">
+          <summary class="btn ghost">Organizar charla</summary>
+          <div class="organizar-body card">
+            <p class="intro">Enlazá otras charlas para reutilizar ideas y aprendizajes guardados.</p>
+            <div class="enlaces-head">
+              <label class="check check-inline">
+                <input type="checkbox" id="enlace-todas-carpetas" />
+                <span>Mostrar charlas de todas las carpetas</span>
+              </label>
+            </div>
+            <div id="lista-enlaces" class="enlace-list" aria-label="Charlas para enlazar"></div>
+            <details class="ids-avanzado">
+              <summary>IDs manual</summary>
+              <input id="relacionadas" type="text" placeholder="solo si necesitás pegar un id" />
+            </details>
+            <div class="chat-actions">
+              <button type="button" id="btn-guardar-meta" class="btn secondary">Guardar cambios</button>
+              <button type="button" id="btn-aprendizaje" class="btn secondary">Guardar aprendizaje</button>
+            </div>
+          </div>
+        </details>
       </header>
+
       <div id="mensajes" class="mensajes" role="log" aria-live="polite"></div>
+
       <form id="form-chat" class="composer">
-        <textarea id="input" rows="2" placeholder="Escribí tu mensaje…" required></textarea>
-        <button type="submit" class="btn primary" id="btn-enviar">Enviar</button>
+        <div class="composer-inner">
+          <textarea
+            id="input"
+            rows="2"
+            placeholder="Escribí lo que quieras preguntar o contar…"
+            required
+            aria-label="Mensaje"
+          ></textarea>
+          <button type="submit" class="btn primary btn-send" id="btn-enviar">Enviar</button>
+        </div>
       </form>
     </main>
   </div>
